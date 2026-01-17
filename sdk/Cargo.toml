@@ -1,0 +1,19 @@
+[package]
+name = "mcpsol"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "MCP-native SDK for Solana programs using Pinocchio"
+
+[dependencies]
+pinocchio = { workspace = true }
+pinocchio-system = { workspace = true }
+pinocchio-log = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+mcpsol-macros = { path = "../macros" }
+
+[features]
+default = []
+# Generate MCP schema at build time
+mcp-schema = []
