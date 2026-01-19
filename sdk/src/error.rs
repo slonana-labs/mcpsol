@@ -1,25 +1,32 @@
+//! Error types for mcpsol programs.
+
 use pinocchio::program_error::ProgramError;
 
+/// Errors that can be returned by mcpsol programs.
+///
+/// These are converted to Solana's `ProgramError::Custom(code)` where
+/// the code is the discriminant value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
+#[non_exhaustive]
 pub enum McpSolError {
     /// Invalid instruction discriminator
     InvalidInstruction = 0,
-    /// Account validation failed
+    /// Account validation failed (generic)
     InvalidAccount = 1,
-    /// Missing required account
+    /// Missing required account in instruction
     MissingAccount = 2,
     /// Account not signer when required
     MissingSigner = 3,
     /// Account not writable when required
     NotWritable = 4,
-    /// Account owner mismatch
+    /// Account owner mismatch (wrong program owns account)
     InvalidOwner = 5,
-    /// Constraint violation
+    /// Constraint violation (e.g., PDA mismatch, has_one check)
     ConstraintViolation = 6,
-    /// Serialization error
+    /// Serialization/deserialization error
     SerializationError = 7,
-    /// Arithmetic overflow
+    /// Arithmetic overflow/underflow
     Overflow = 8,
 }
 

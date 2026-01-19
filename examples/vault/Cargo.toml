@@ -1,0 +1,20 @@
+[package]
+name = "mcp-vault"
+version = "0.1.0"
+edition = "2021"
+description = "Token vault with PDAs demonstrating advanced MCP patterns"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+mcpsol-core = { path = "../../core" }
+pinocchio = { workspace = true }
+pinocchio-log = { workspace = true }
+bytemuck = { workspace = true }
+
+[features]
+no-entrypoint = []
+
+[lints]
+workspace = true

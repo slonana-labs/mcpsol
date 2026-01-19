@@ -1,0 +1,19 @@
+[package]
+name = "native-counter"
+version = "0.1.0"
+edition = "2021"
+description = "Native Solana counter program with MCP schema"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+mcpsol-native = { path = "../../native" }
+solana-program = { workspace = true }
+bytemuck = { workspace = true }
+
+[features]
+no-entrypoint = []
+
+[lints]
+workspace = true

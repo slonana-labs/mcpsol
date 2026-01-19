@@ -1,17 +1,41 @@
 use pinocchio::account_info::AccountInfo;
-use pinocchio::program_error::ProgramError;
 use pinocchio::pubkey::Pubkey;
 
-use crate::error::McpSolError;
-use crate::Result;
+use crate::error::{McpSolError, Result};
 
 /// Account wrapper with validation
+///
+/// # Security
+/// This wrapper verifies:
+/// - Account data matches expected type (via discriminator)
+/// - Account is owned by the expected program (must pass program_id)
 pub struct Account<'a, T: AccountDeserialize> {
     pub info: &'a AccountInfo,
     pub data: T,
 }
 
 impl<'a, T: AccountDeserialize> Account<'a, T> {
+    /// Create Account with owner verification
+    ///
+    /// # Security
+    /// Verifies the account is owned by `expected_owner` before deserializing.
+    /// This prevents cross-program account substitution attacks.
+    pub fn try_from_with_owner(info: &'a AccountInfo, expected_owner: &Pubkey) -> Result<Self> {
+        // SECURITY: Verify account owner before trusting data
+        // Safety: owner() returns a valid pointer to the account's owner pubkey
+        if unsafe { info.owner() } != expected_owner {
+            return Err(McpSolError::InvalidOwner.into());
+        }
+        let data = T::try_deserialize(&info.try_borrow_data()?)?;
+        Ok(Self { info, data })
+    }
+
+    /// Create Account without owner verification
+    ///
+    /// # Safety
+    /// This is unsafe in most contexts. Only use when you have verified
+    /// the account owner through other means (e.g., PDA derivation).
+    /// Prefer `try_from_with_owner` for security.
     pub fn try_from(info: &'a AccountInfo) -> Result<Self> {
         let data = T::try_deserialize(&info.try_borrow_data()?)?;
         Ok(Self { info, data })
@@ -37,13 +61,24 @@ impl<'a> Signer<'a> {
 }
 
 /// System account (SOL holder, no data)
+///
+/// # Security
+/// Verifies the account is owned by the System Program.
 pub struct SystemAccount<'a> {
     pub info: &'a AccountInfo,
 }
 
+/// System program ID (all zeros)
+const SYSTEM_PROGRAM_ID: [u8; 32] = [0u8; 32];
+
 impl<'a> SystemAccount<'a> {
     pub fn try_from(info: &'a AccountInfo) -> Result<Self> {
-        // System accounts are owned by system program
+        // SECURITY: Verify account is owned by system program
+        // Safety: owner() returns a valid pointer to the account's owner pubkey
+        let owner = unsafe { info.owner() };
+        if owner.as_ref() != &SYSTEM_PROGRAM_ID {
+            return Err(McpSolError::InvalidOwner.into());
+        }
         Ok(Self { info })
     }
 
@@ -74,12 +109,31 @@ impl<'a> Program<'a> {
     }
 }
 
-/// Unchecked account - no validation
+/// Unchecked account - no validation performed
+///
+/// # Security Warning
+/// This type performs NO validation on the account. The account:
+/// - May be owned by any program
+/// - May contain arbitrary data
+/// - May not be a signer even if expected
+/// - May not be writable even if expected
+///
+/// Only use this when you:
+/// 1. Need to accept accounts of unknown type
+/// 2. Will perform all necessary validation manually
+/// 3. Understand the security implications
+///
+/// For most cases, prefer `Account<T>`, `Signer`, or `SystemAccount`.
 pub struct UncheckedAccount<'a> {
     pub info: &'a AccountInfo,
 }
 
 impl<'a> UncheckedAccount<'a> {
+    /// Create an unchecked account reference
+    ///
+    /// # Security
+    /// No validation is performed. Caller must verify owner, signer status,
+    /// writability, and data validity as needed.
     pub fn try_from(info: &'a AccountInfo) -> Result<Self> {
         Ok(Self { info })
     }

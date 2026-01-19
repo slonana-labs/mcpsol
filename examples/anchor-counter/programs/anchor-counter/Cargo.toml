@@ -1,0 +1,27 @@
+[package]
+name = "anchor-counter"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.31"
+mcpsol-anchor = { path = "../../../../anchor" }
+
+[lints.rust]
+# Suppress cfg warnings from external crates (pinocchio, anchor)
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(target_os, values("solana"))',
+    'cfg(feature, values("custom-heap", "custom-panic", "anchor-debug"))',
+]}
+# Suppress anchor-lang internal deprecation warnings
+deprecated = "allow"

@@ -32,6 +32,9 @@ pub mod error;
 pub mod mcp;
 pub mod traits;
 
+/// Re-export mcpsol-core for compact schema generation
+pub use mcpsol_core as core;
+
 pub mod prelude {
     pub use crate::account::*;
     pub use crate::context::*;
@@ -43,7 +46,28 @@ pub mod prelude {
     pub use pinocchio::entrypoint;
     pub use pinocchio::program_error::ProgramError;
     pub use pinocchio::pubkey::Pubkey;
+
+    // Re-export core types for compact schema
+    pub use mcpsol_core::{
+        LIST_TOOLS_DISCRIMINATOR,
+        PROTOCOL_VERSION,
+        MAX_RETURN_DATA_SIZE,
+        instruction_discriminator,
+        account_discriminator,
+        McpSchema as CompactSchema,
+        McpSchemaBuilder as CompactSchemaBuilder,
+        McpToolBuilder as CompactToolBuilder,
+        ArgType,
+        generate_compact_schema,
+        generate_schema_bytes,
+    };
 }
+
+// Re-export Result at crate root for macro usage
+pub use error::Result;
 
 /// Re-export pinocchio for convenience
 pub use pinocchio;
+
+/// Re-export serde_json for macro-generated code
+pub use serde_json;

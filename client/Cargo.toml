@@ -1,0 +1,21 @@
+[package]
+name = "mcpsol-client"
+version = "0.1.0"
+edition = "2021"
+description = "Client library for discovering MCP-enabled Solana programs"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+mcpsol-core = { path = "../core" }
+solana-client = "2.2"
+solana-sdk = "2.2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = "2.0"
+base64 = "0.22"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+[lints]
+workspace = true

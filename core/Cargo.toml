@@ -1,0 +1,18 @@
+[package]
+name = "mcpsol-core"
+version = "0.1.0"
+edition = "2021"
+description = "Framework-agnostic MCP schema generation for Solana"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = ["std"]
+std = []
+# no-std for on-chain use
+no-std = []
+
+[dependencies]
+sha2 = { version = "0.10", default-features = false }
+
+[lints]
+workspace = true

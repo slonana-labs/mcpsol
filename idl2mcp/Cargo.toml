@@ -1,0 +1,21 @@
+[package]
+name = "idl2mcp"
+version = "0.1.0"
+edition = "2021"
+description = "Convert Anchor IDL to MCP schema"
+license = "MIT OR Apache-2.0"
+
+[[bin]]
+name = "idl2mcp"
+path = "src/main.rs"
+
+[dependencies]
+mcpsol-core = { path = "../core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+clap = { version = "4.4", features = ["derive"] }
+anyhow = "1.0"
+glob = "0.3"
+
+[lints]
+workspace = true

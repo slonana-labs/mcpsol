@@ -1,0 +1,16 @@
+[package]
+name = "mcpsol-anchor"
+version = "0.1.0"
+edition = "2021"
+description = "MCP schema generation for Anchor programs"
+license = "MIT OR Apache-2.0"
+
+[features]
+default = []
+
+[dependencies]
+mcpsol-core = { path = "../core" }
+anchor-lang = "0.31"
+
+[lints]
+workspace = true

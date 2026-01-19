@@ -1,27 +1,25 @@
 use pinocchio::account_info::AccountInfo;
 use pinocchio::pubkey::Pubkey;
 
-use crate::Result;
+use crate::error::Result;
 
 /// Instruction context holding accounts and program id
-pub struct Context<'a, 'info, T: Accounts<'info>> {
-    pub program_id: &'a Pubkey,
+pub struct Context<'info, T: Accounts<'info>> {
+    pub program_id: &'info Pubkey,
     pub accounts: T,
-    pub remaining_accounts: &'a [AccountInfo],
-    _marker: core::marker::PhantomData<&'info ()>,
+    pub remaining_accounts: &'info [AccountInfo],
 }
 
-impl<'a, 'info, T: Accounts<'info>> Context<'a, 'info, T> {
+impl<'info, T: Accounts<'info>> Context<'info, T> {
     pub fn new(
-        program_id: &'a Pubkey,
+        program_id: &'info Pubkey,
         accounts: T,
-        remaining_accounts: &'a [AccountInfo],
+        remaining_accounts: &'info [AccountInfo],
     ) -> Self {
         Self {
             program_id,
             accounts,
             remaining_accounts,
-            _marker: core::marker::PhantomData,
         }
     }
 }
@@ -36,23 +34,20 @@ pub trait Accounts<'info>: Sized {
 }
 
 /// Builder for creating context from raw entrypoint data
-pub struct ContextBuilder<'a> {
-    program_id: &'a Pubkey,
-    accounts: &'a [AccountInfo],
+pub struct ContextBuilder<'info> {
+    program_id: &'info Pubkey,
+    accounts: &'info [AccountInfo],
 }
 
-impl<'a> ContextBuilder<'a> {
-    pub fn new(program_id: &'a Pubkey, accounts: &'a [AccountInfo]) -> Self {
+impl<'info> ContextBuilder<'info> {
+    pub fn new(program_id: &'info Pubkey, accounts: &'info [AccountInfo]) -> Self {
         Self {
             program_id,
             accounts,
         }
     }
 
-    pub fn build<'info, T: Accounts<'info>>(self) -> Result<Context<'a, 'info, T>>
-    where
-        'a: 'info,
-    {
+    pub fn build<T: Accounts<'info>>(self) -> Result<Context<'info, T>> {
         let accounts = T::try_accounts(self.program_id, self.accounts)?;
         Ok(Context::new(self.program_id, accounts, &[]))
     }

@@ -1,0 +1,23 @@
+[package]
+name = "counter"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+mcpsol = { path = "../../sdk" }
+mcpsol-core = { path = "../../core" }
+pinocchio = "0.8"
+pinocchio-log = "0.4"
+five8_const = "0.1"
+bytemuck = { version = "1.14", features = ["derive"] }
+
+[features]
+default = []
+# Build BPF for Solana
+bpf = []
+
+[lints]
+workspace = true

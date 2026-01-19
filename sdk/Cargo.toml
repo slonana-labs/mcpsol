@@ -6,14 +6,19 @@ license.workspace = true
 description = "MCP-native SDK for Solana programs using Pinocchio"
 
 [dependencies]
+mcpsol-core = { path = "../core" }
+mcpsol-macros = { path = "../macros" }
 pinocchio = { workspace = true }
 pinocchio-system = { workspace = true }
 pinocchio-log = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-mcpsol-macros = { path = "../macros" }
+bytemuck = { workspace = true }
 
 [features]
 default = []
 # Generate MCP schema at build time
 mcp-schema = []
+
+[lints]
+workspace = true
