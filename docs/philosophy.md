@@ -41,7 +41,7 @@ Discovery requires only an RPC endpoint - the same infrastructure needed to subm
 
 ### Compute efficiency
 
-Schema generation happens at compile time via proc-macros. Runtime cost is a single `set_return_data` call (~100 CUs). No parsing, no allocation, no computation.
+Schema generation happens at compile time via proc-macros. Runtime cost is a single `set_return_data` call. No parsing, no allocation, no computation.
 
 ### Size constraints
 

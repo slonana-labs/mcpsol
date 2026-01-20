@@ -11,7 +11,7 @@
 use bytemuck::{Pod, Zeroable};
 use mcpsol_core::{
     ArgType, McpSchema, McpSchemaBuilder, McpToolBuilder,
-    LIST_TOOLS_DISCRIMINATOR, generate_paginated_schema_bytes,
+    LIST_TOOLS_DISCRIMINATOR, CachedSchemaPages,
 };
 use pinocchio::{
     account_info::AccountInfo,
@@ -96,11 +96,12 @@ fn build_schema() -> McpSchema {
         .build()
 }
 
-/// Lazy static schema
-static SCHEMA: std::sync::OnceLock<McpSchema> = std::sync::OnceLock::new();
+/// Cached schema pages for CU-efficient list_tools responses.
+/// Pre-computes serialized JSON for each pagination page at first access.
+static CACHED_PAGES: std::sync::OnceLock<CachedSchemaPages> = std::sync::OnceLock::new();
 
-fn get_schema() -> &'static McpSchema {
-    SCHEMA.get_or_init(build_schema)
+fn get_cached_pages() -> &'static CachedSchemaPages {
+    CACHED_PAGES.get_or_init(|| CachedSchemaPages::from_schema(build_schema()))
 }
 
 #[cfg(not(feature = "no-entrypoint"))]
@@ -121,8 +122,8 @@ pub fn process_instruction(
         LIST_TOOLS_DISCRIMINATOR => {
             log!("list_tools");
             let cursor = data.get(8).copied().unwrap_or(0);
-            let schema_bytes = generate_paginated_schema_bytes(get_schema(), cursor);
-            pinocchio::program::set_return_data(&schema_bytes);
+            let page_bytes = get_cached_pages().get_page(cursor);
+            pinocchio::program::set_return_data(page_bytes);
             Ok(())
         }
         INITIALIZE => {
@@ -320,29 +321,30 @@ mod tests {
     use mcpsol_core::MAX_RETURN_DATA_SIZE;
 
     #[test]
-    fn test_paginated_schema() {
-        let schema = build_schema();
+    fn test_paginated_schema_with_cache() {
+        // Demonstrates CU-optimized pagination pattern
+        let cached = CachedSchemaPages::from_schema(build_schema());
 
-        for cursor in 0..schema.tools.len() {
-            let json_bytes = generate_paginated_schema_bytes(&schema, cursor as u8);
-            let json = String::from_utf8(json_bytes.clone()).unwrap();
+        for cursor in 0..cached.num_pages() {
+            let page_bytes = cached.get_page(cursor as u8);
+            let json = String::from_utf8(page_bytes.to_vec()).unwrap();
 
-            println!("Page {} ({} bytes):\n{}\n", cursor, json_bytes.len(), json);
+            println!("Page {} ({} bytes):\n{}\n", cursor, page_bytes.len(), json);
 
             assert!(
-                json_bytes.len() <= MAX_RETURN_DATA_SIZE,
+                page_bytes.len() <= MAX_RETURN_DATA_SIZE,
                 "Page {} ({} bytes) exceeds 1024 limit",
                 cursor,
-                json_bytes.len()
+                page_bytes.len()
             );
         }
     }
 
     #[test]
     fn test_schema_has_pda_info() {
-        let schema = build_schema();
-        let json_bytes = generate_paginated_schema_bytes(&schema, 1); // initialize
-        let json = String::from_utf8(json_bytes).unwrap();
+        let cached = CachedSchemaPages::from_schema(build_schema());
+        let page_bytes = cached.get_page(1); // initialize
+        let json = String::from_utf8(page_bytes.to_vec()).unwrap();
 
         println!("Initialize tool:\n{}", json);
 
@@ -354,5 +356,18 @@ mod tests {
     #[test]
     fn test_vault_size() {
         assert_eq!(core::mem::size_of::<Vault>(), 88);
+    }
+
+    #[test]
+    fn test_cached_pages_zero_alloc_lookup() {
+        // Verify that get_page returns references (no allocation)
+        let cached = CachedSchemaPages::from_schema(build_schema());
+
+        // Multiple calls should return identical slices (no regeneration)
+        let page0_first = cached.get_page(0);
+        let page0_second = cached.get_page(0);
+
+        assert!(core::ptr::eq(page0_first.as_ptr(), page0_second.as_ptr()),
+            "get_page should return same slice (no reallocation)");
     }
 }

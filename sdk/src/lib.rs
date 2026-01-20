@@ -30,6 +30,7 @@ pub mod account;
 pub mod context;
 pub mod error;
 pub mod mcp;
+pub mod read;
 pub mod traits;
 
 /// Re-export mcpsol-core for compact schema generation
@@ -40,6 +41,7 @@ pub mod prelude {
     pub use crate::context::*;
     pub use crate::error::{McpSolError, Result};
     pub use crate::mcp::*;
+    pub use crate::read;
     pub use crate::traits::*;
     pub use mcpsol_macros::*;
     pub use pinocchio::account_info::AccountInfo;

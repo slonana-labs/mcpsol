@@ -55,7 +55,7 @@ mcpsol/
 
 ### mcpsol-core
 
-Zero-dependency crate containing:
+Core types (depends only on `sha2` for discriminators):
 
 - `McpSchema` - Root schema type
 - `McpTool` - Tool/instruction definition
@@ -65,7 +65,7 @@ Zero-dependency crate containing:
 - `generate_paginated_schema_bytes()` - Paginated serialization
 - Discriminator calculation utilities
 
-No framework dependencies. Used by all other crates.
+Used by all other crates. No Solana framework dependencies (works with Pinocchio, Anchor, or native).
 
 ### mcpsol-macros
 
@@ -149,11 +149,13 @@ This ensures compatibility with existing Anchor programs.
 ### Builder-based (runtime)
 
 ```
-1. build_schema() called on first list_tools
+1. build_schema() called on each list_tools
 2. McpSchemaBuilder constructs McpSchema
 3. generate_paginated_schema_bytes() serializes
 4. set_return_data() returns to caller
 ```
+
+Note: Schema is rebuilt each call. No caching between transactions on-chain.
 
 ## Pagination
 
@@ -171,6 +173,15 @@ Response: {"name":"prog","tools":[{tool2}]}  // no nextCursor = done
 ```
 
 Each page contains one tool. Cursor is the tool index.
+
+## Macro vs Builder
+
+| Approach | When to Use | CU Cost |
+|----------|-------------|---------|
+| Macro (`#[mcp_program]`) | New programs | Minimal (const in .rodata) |
+| Builder (`McpSchemaBuilder`) | Custom schemas, Anchor | Higher (runtime serialization) |
+
+Prefer macros when possible - schema is embedded at compile time with zero runtime cost.
 
 ## Memory Layout
 

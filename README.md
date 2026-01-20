@@ -154,6 +154,30 @@ idl2mcp --input target/idl/program.json --output schema.json
 | `examples/native-counter` | Native solana-program |
 | `examples/anchor-counter` | Anchor integration |
 
+## Performance
+
+| Mode | CU Overhead | Use When |
+|------|-------------|----------|
+| With Context | ~50-70 CU | Default, need `remaining_accounts` |
+| Without Context | ~20-30 CU | Simple instructions, performance critical |
+
+Skip Context for maximum performance:
+
+```rust
+#[mcp_instruction(name = "increment", accounts = "counter:mut, authority:signer")]
+pub fn increment(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    amount: u64,
+) -> Result<()> {
+    let counter = &accounts[0];
+    let authority = &accounts[1];
+    // ...
+}
+```
+
+See [docs/overhead.md](docs/overhead.md) for details.
+
 ## Limitations
 
 - **Schema size**: Complex programs may exceed the 1024-byte limit

@@ -291,21 +291,38 @@ pub fn estimate_schema_size(schema: &McpSchema) -> usize {
     size += schema.name.len();
 
     for tool in &schema.tools {
-        size += 30; // Tool overhead
-        size += tool.name.len();
-        size += 16; // Discriminator hex
+        size += estimate_single_tool_size(Some(tool));
+    }
 
-        if let Some(ref desc) = tool.description {
-            size += desc.len() + 6; // "i":"..." overhead
-        }
+    size
+}
 
-        for acc in &tool.accounts {
-            size += acc.name.len() + 15; // Account entry
-        }
+/// Estimate the size of a single tool's JSON representation.
+///
+/// Used for pre-allocating buffers in paginated schema generation.
+/// Returns 0 if tool is None.
+pub fn estimate_single_tool_size(tool: Option<&McpTool>) -> usize {
+    let tool = match tool {
+        Some(t) => t,
+        None => return 0,
+    };
 
-        for arg in &tool.args {
-            size += arg.name.len() + 10; // Arg entry
-        }
+    let mut size = 30; // Tool overhead: {"n":"...","d":"..."}
+    size += tool.name.len();
+    size += 16; // Discriminator hex (8 bytes = 16 hex chars)
+
+    if let Some(ref desc) = tool.description {
+        size += desc.len() + 6; // ,"i":"..." overhead
+    }
+
+    // Accounts: "name_suffix":"pubkey"
+    for acc in &tool.accounts {
+        size += acc.name.len() + 15; // name + suffix + "pubkey" + quotes + colon
+    }
+
+    // Args: "name":"type"
+    for arg in &tool.args {
+        size += arg.name.len() + 10; // name + type + quotes + colon
     }
 
     size
@@ -558,5 +575,83 @@ mod tests {
         assert_eq!(format_cursor(10, &mut buf), "10");
         assert_eq!(format_cursor(99, &mut buf), "99");
         assert_eq!(format_cursor(255, &mut buf), "255");
+    }
+
+    // ========================================================================
+    // CU Optimization Tests - Verify JSON output remains identical
+    // ========================================================================
+
+    #[test]
+    fn test_cached_pages_identical_output() {
+        // Build a typical schema
+        let schema = McpSchemaBuilder::new("counter")
+            .add_tool(
+                McpToolBuilder::new("initialize")
+                    .description("Create counter")
+                    .signer_writable("counter")
+                    .signer("authority")
+                    .build()
+            )
+            .add_tool(
+                McpToolBuilder::new("increment")
+                    .description("Add to counter")
+                    .writable("counter")
+                    .signer("authority")
+                    .arg("amount", ArgType::U64)
+                    .build()
+            )
+            .build();
+
+        // Generate pages directly
+        let direct_page_0 = generate_paginated_schema_bytes(&schema, 0);
+        let direct_page_1 = generate_paginated_schema_bytes(&schema, 1);
+
+        // Generate pages via CachedSchemaPages
+        let cached = crate::CachedSchemaPages::from_schema(schema);
+        let cached_page_0 = cached.get_page(0);
+        let cached_page_1 = cached.get_page(1);
+
+        // Verify byte-for-byte identical output
+        assert_eq!(
+            direct_page_0, cached_page_0,
+            "Page 0 output differs between direct and cached generation"
+        );
+        assert_eq!(
+            direct_page_1, cached_page_1,
+            "Page 1 output differs between direct and cached generation"
+        );
+
+        // Verify content is valid JSON
+        let json_0 = String::from_utf8_lossy(cached_page_0);
+        let json_1 = String::from_utf8_lossy(cached_page_1);
+        assert!(json_0.starts_with("{\"v\":"), "Page 0 should be valid JSON");
+        assert!(json_1.starts_with("{\"v\":"), "Page 1 should be valid JSON");
+    }
+
+    #[test]
+    fn test_presized_buffer_identical_output() {
+        // Verify that pre-sized buffer optimization produces identical output
+        let schema = McpSchemaBuilder::new("test_program")
+            .add_tool(
+                McpToolBuilder::new("action")
+                    .description("Do something")
+                    .signer_writable("account")
+                    .arg("value", ArgType::U64)
+                    .build()
+            )
+            .build();
+
+        // Generate multiple times - should be identical
+        let output_1 = generate_compact_schema(&schema);
+        let output_2 = generate_compact_schema(&schema);
+        let output_3 = generate_compact_schema(&schema);
+
+        assert_eq!(output_1, output_2, "Repeated generation should be identical");
+        assert_eq!(output_2, output_3, "Repeated generation should be identical");
+
+        // Verify JSON structure
+        assert!(output_1.contains("\"v\":\"2024-11-05\""));
+        assert!(output_1.contains("\"name\":\"test_program\""));
+        assert!(output_1.contains("\"n\":\"action\""));
     }
 }

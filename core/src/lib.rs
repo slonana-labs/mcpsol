@@ -22,6 +22,7 @@ pub use json::{
     generate_compact_schema,
     generate_schema_bytes,
     estimate_schema_size,
+    estimate_single_tool_size,
     // Paginated verbose schema (full descriptions)
     generate_paginated_schema,
     generate_paginated_schema_bytes,

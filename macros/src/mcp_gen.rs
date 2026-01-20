@@ -155,6 +155,7 @@ mod tests {
                     },
                 ],
                 accounts_type: Some("Modify".to_string()),
+                use_context: true,
             },
         ];
 

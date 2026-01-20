@@ -9,6 +9,7 @@
 | [Schema Specification](schema.md) | Wire format and field definitions |
 | [Integration Guide](integration.md) | Adding MCP to your program |
 | [AI Agents](ai-agents.md) | Building agents that consume MCP schemas |
+| [Overhead](overhead.md) | CU costs and Context vs no-Context |
 
 ## Quick Links
 

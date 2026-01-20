@@ -95,7 +95,7 @@ For programs needing custom schema construction.
 ```toml
 [dependencies]
 mcpsol-core = "0.1"
-pinocchio = "0.7"
+pinocchio = "0.8"
 ```
 
 ### Build Schema
@@ -128,22 +128,21 @@ fn build_schema() -> McpSchema {
 ### Handle list_tools
 
 ```rust
-static SCHEMA: std::sync::OnceLock<McpSchema> = std::sync::OnceLock::new();
-
-fn get_schema() -> &'static McpSchema {
-    SCHEMA.get_or_init(build_schema)
-}
-
 pub fn process_instruction(
     _program_id: &Pubkey,
     _accounts: &[AccountInfo],
     data: &[u8],
 ) -> ProgramResult {
-    let discriminator: [u8; 8] = data[..8].try_into().unwrap();
+    if data.len() < 8 {
+        return Err(ProgramError::InvalidInstructionData);
+    }
+    let discriminator: [u8; 8] = data[..8].try_into()
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
 
     if discriminator == LIST_TOOLS_DISCRIMINATOR {
         let cursor = data.get(8).copied().unwrap_or(0);
-        let bytes = generate_paginated_schema_bytes(get_schema(), cursor);
+        let schema = build_schema();
+        let bytes = generate_paginated_schema_bytes(&schema, cursor);
         pinocchio::program::set_return_data(&bytes);
         return Ok(());
     }
@@ -234,9 +233,13 @@ pub fn process_instruction(
     _accounts: &[AccountInfo],
     data: &[u8],
 ) -> ProgramResult {
+    if data.len() < 8 {
+        return Err(ProgramError::InvalidInstructionData);
+    }
     if data[..8] == LIST_TOOLS_DISCRIMINATOR {
         let cursor = data.get(8).copied().unwrap_or(0);
-        let bytes = generate_paginated_schema_bytes(&build_schema(), cursor);
+        let schema = build_schema();
+        let bytes = generate_paginated_schema_bytes(&schema, cursor);
         set_return_data(&bytes);
         return Ok(());
     }

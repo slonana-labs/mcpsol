@@ -8,7 +8,7 @@ use mcpsol::account::AccountData;
 use mcpsol_core::{
     McpSchema, McpSchemaBuilder,
     McpToolBuilder as CoreToolBuilder,
-    ArgType, generate_paginated_schema_bytes,
+    ArgType, CachedSchemaPages,
 };
 
 // Program ID - the actual deployed address
@@ -89,11 +89,12 @@ fn build_schema() -> McpSchema {
         .build()
 }
 
-/// Lazy static schema
-static SCHEMA: std::sync::OnceLock<McpSchema> = std::sync::OnceLock::new();
+/// Cached schema pages for CU-efficient list_tools responses.
+/// Pre-computes serialized JSON for each pagination page at first access.
+static CACHED_PAGES: std::sync::OnceLock<CachedSchemaPages> = std::sync::OnceLock::new();
 
-fn get_schema() -> &'static McpSchema {
-    SCHEMA.get_or_init(build_schema)
+fn get_cached_pages() -> &'static CachedSchemaPages {
+    CACHED_PAGES.get_or_init(|| CachedSchemaPages::from_schema(build_schema()))
 }
 
 // Discriminator constants
@@ -121,8 +122,8 @@ pub fn process_instruction(
     match discriminator {
         LIST_TOOLS => {
             let cursor = data.get(8).copied().unwrap_or(0);
-            let schema_bytes = generate_paginated_schema_bytes(get_schema(), cursor);
-            pinocchio::program::set_return_data(&schema_bytes);
+            let page_bytes = get_cached_pages().get_page(cursor);
+            pinocchio::program::set_return_data(page_bytes);
             Ok(())
         }
         INITIALIZE => {

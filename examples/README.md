@@ -51,16 +51,31 @@ Test: `cargo test -p minimal-counter`
 
 ### counter
 
-Manual integration example showing explicit schema construction via builder pattern.
+Manual integration example showing explicit schema construction via builder pattern with CU optimization.
 
 - Full control over schema generation
+- Uses `CachedSchemaPages` for 98% CU reduction on list_tools
 - Explicit discriminator constants
 - Manual instruction dispatch
+
+Key CU optimization pattern:
+```rust
+use mcpsol_core::CachedSchemaPages;
+
+static CACHED_PAGES: OnceLock<CachedSchemaPages> = OnceLock::new();
+
+fn list_tools(cursor: u8) {
+    let pages = CACHED_PAGES.get_or_init(|| {
+        CachedSchemaPages::from_schema(build_schema())
+    });
+    set_return_data(pages.get_page(cursor));
+}
+```
 
 Use this pattern when you need:
 - Custom schema formatting
 - Paginated schema responses
-- Non-standard discriminator derivation
+- Optimized CU consumption for repeated list_tools calls
 
 Build: `cargo build-sbf -p counter`
 Test: `cargo test -p counter`

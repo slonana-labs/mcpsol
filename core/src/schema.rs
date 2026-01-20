@@ -344,6 +344,77 @@ impl McpToolBuilder {
     }
 }
 
+// ============================================================================
+// CachedSchemaPages - Pre-computed paginated schema for CU optimization
+// ============================================================================
+
+/// Pre-computed paginated schema pages for CU-efficient `list_tools` responses.
+///
+/// This struct caches the serialized JSON bytes for each pagination page,
+/// avoiding repeated serialization overhead on subsequent `list_tools` calls.
+///
+/// # Example
+///
+/// ```ignore
+/// use mcpsol_core::CachedSchemaPages;
+///
+/// fn build_schema() -> McpSchema {
+///     // ... build your schema
+/// }
+///
+/// static CACHED: std::sync::OnceLock<CachedSchemaPages> = std::sync::OnceLock::new();
+///
+/// fn get_page(cursor: u8) -> &'static [u8] {
+///     CACHED.get_or_init(|| CachedSchemaPages::from_schema(build_schema()))
+///         .get_page(cursor)
+/// }
+/// ```
+#[cfg(feature = "std")]
+#[derive(Debug, Clone)]
+pub struct CachedSchemaPages {
+    /// Pre-serialized JSON bytes for each page
+    pages: Vec<Vec<u8>>,
+}
+
+#[cfg(feature = "std")]
+impl CachedSchemaPages {
+    /// Create cached pages from a schema.
+    ///
+    /// This pre-computes and caches the serialized JSON for each pagination page.
+    /// The first page (cursor=0) contains the first tool, and so on.
+    pub fn from_schema(schema: McpSchema) -> Self {
+        use crate::generate_paginated_schema_bytes;
+
+        let num_pages = schema.tools.len().max(1);
+        let mut pages = Vec::with_capacity(num_pages);
+
+        for cursor in 0..num_pages {
+            let page_bytes = generate_paginated_schema_bytes(&schema, cursor as u8);
+            pages.push(page_bytes);
+        }
+
+        Self { pages }
+    }
+
+    /// Get a cached page by cursor index.
+    ///
+    /// Returns an empty slice if cursor is out of bounds.
+    /// This is a zero-allocation operation after initialization.
+    #[inline]
+    pub fn get_page(&self, cursor: u8) -> &[u8] {
+        self.pages
+            .get(cursor as usize)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Get the number of pages (tools) in this cached schema.
+    #[inline]
+    pub fn num_pages(&self) -> usize {
+        self.pages.len()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
