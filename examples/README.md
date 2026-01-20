@@ -66,7 +66,7 @@ static CACHED_PAGES: OnceLock<CachedSchemaPages> = OnceLock::new();
 
 fn list_tools(cursor: u8) {
     let pages = CACHED_PAGES.get_or_init(|| {
-        CachedSchemaPages::from_schema(build_schema())
+        CachedSchemaPages::from_schema(&build_schema())
     });
     set_return_data(pages.get_page(cursor));
 }

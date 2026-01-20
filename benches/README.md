@@ -54,7 +54,7 @@ use mcpsol_core::CachedSchemaPages;
 static CACHED: OnceLock<CachedSchemaPages> = OnceLock::new();
 
 fn list_tools(cursor: u8) {
-    let pages = CACHED.get_or_init(|| CachedSchemaPages::from_schema(build_schema()));
+    let pages = CACHED.get_or_init(|| CachedSchemaPages::from_schema(&build_schema()));
     set_return_data(pages.get_page(cursor));
 }
 ```

@@ -23,17 +23,22 @@ The macro now generates `MCP_SCHEMA_BYTES: &'static [u8]` instead of a string, e
 
 ```rust
 use mcpsol_core::{McpSchemaBuilder, McpToolBuilder, CachedSchemaPages};
+use std::sync::OnceLock;
 
-// Option 1: Use the new cached pages helper
-static CACHED_PAGES: CachedSchemaPages = CachedSchemaPages::new(build_schema);
+// Cache schema pages at first access
+static CACHED_PAGES: OnceLock<CachedSchemaPages> = OnceLock::new();
+
+fn get_cached_pages() -> &'static CachedSchemaPages {
+    CACHED_PAGES.get_or_init(|| CachedSchemaPages::from_schema(&build_schema()))
+}
 
 pub fn process_list_tools(cursor: u8) {
-    // Returns &'static [u8] - no allocation on subsequent calls
-    let page = CACHED_PAGES.get_page(cursor);
+    // Returns &[u8] - no allocation on subsequent calls
+    let page = get_cached_pages().get_page(cursor);
     pinocchio::program::set_return_data(page);
 }
 
-// Option 2: Manual caching (existing pattern, still works)
+// Alternative: Manual caching (existing pattern, still works)
 static SCHEMA: OnceLock<McpSchema> = OnceLock::new();
 
 fn get_schema() -> &'static McpSchema {
