@@ -94,7 +94,7 @@ fn build_schema() -> McpSchema {
 static CACHED_PAGES: std::sync::OnceLock<CachedSchemaPages> = std::sync::OnceLock::new();
 
 fn get_cached_pages() -> &'static CachedSchemaPages {
-    CACHED_PAGES.get_or_init(|| CachedSchemaPages::from_schema(build_schema()))
+    CACHED_PAGES.get_or_init(|| CachedSchemaPages::from_schema(&build_schema()))
 }
 
 // Discriminator constants
@@ -148,11 +148,15 @@ fn parse_u64(data: &[u8]) -> core::result::Result<u64, pinocchio::program_error:
     if data.len() < 8 {
         return Err(pinocchio::program_error::ProgramError::InvalidInstructionData);
     }
-    Ok(u64::from_le_bytes(data[..8].try_into().unwrap()))
+    // Safe: Length >= 8 verified above
+    let bytes: [u8; 8] = data[..8]
+        .try_into()
+        .map_err(|_| pinocchio::program_error::ProgramError::InvalidInstructionData)?;
+    Ok(u64::from_le_bytes(bytes))
 }
 
 fn process_initialize(program_id: &Pubkey, accounts: &[AccountInfo]) -> pinocchio::ProgramResult {
-    let counter_account = accounts.get(0)
+    let counter_account = accounts.first()
         .ok_or(pinocchio::program_error::ProgramError::NotEnoughAccountKeys)?;
     let authority = accounts.get(1)
         .ok_or(pinocchio::program_error::ProgramError::NotEnoughAccountKeys)?;
@@ -189,7 +193,7 @@ fn process_initialize(program_id: &Pubkey, accounts: &[AccountInfo]) -> pinocchi
 }
 
 fn process_increment(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> pinocchio::ProgramResult {
-    let counter_account = accounts.get(0)
+    let counter_account = accounts.first()
         .ok_or(pinocchio::program_error::ProgramError::NotEnoughAccountKeys)?;
     let authority = accounts.get(1)
         .ok_or(pinocchio::program_error::ProgramError::NotEnoughAccountKeys)?;
@@ -222,7 +226,11 @@ fn process_increment(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64)
         return Err(pinocchio::program_error::ProgramError::InvalidAccountData);
     }
 
-    let current = i64::from_le_bytes(data[8..16].try_into().unwrap());
+    // Safe: Counter data is 56 bytes, discriminator verified, slice [8..16] is valid
+    let current_bytes: [u8; 8] = data[8..16]
+        .try_into()
+        .map_err(|_| pinocchio::program_error::ProgramError::InvalidAccountData)?;
+    let current = i64::from_le_bytes(current_bytes);
     let new_count = current.saturating_add(amount as i64);
     data[8..16].copy_from_slice(&new_count.to_le_bytes());
 
@@ -231,7 +239,7 @@ fn process_increment(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64)
 }
 
 fn process_decrement(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64) -> pinocchio::ProgramResult {
-    let counter_account = accounts.get(0)
+    let counter_account = accounts.first()
         .ok_or(pinocchio::program_error::ProgramError::NotEnoughAccountKeys)?;
     let authority = accounts.get(1)
         .ok_or(pinocchio::program_error::ProgramError::NotEnoughAccountKeys)?;
@@ -262,7 +270,11 @@ fn process_decrement(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64)
         return Err(pinocchio::program_error::ProgramError::InvalidAccountData);
     }
 
-    let current = i64::from_le_bytes(data[8..16].try_into().unwrap());
+    // Safe: Counter data is 56 bytes, discriminator verified, slice [8..16] is valid
+    let current_bytes: [u8; 8] = data[8..16]
+        .try_into()
+        .map_err(|_| pinocchio::program_error::ProgramError::InvalidAccountData)?;
+    let current = i64::from_le_bytes(current_bytes);
     let new_count = current.saturating_sub(amount as i64);
     data[8..16].copy_from_slice(&new_count.to_le_bytes());
 

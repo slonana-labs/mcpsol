@@ -89,7 +89,10 @@ pub fn process_instruction(
         return Err(ProgramError::InvalidInstructionData);
     }
 
-    let discriminator: [u8; 8] = data[..8].try_into().unwrap();
+    // Safe: Length >= 8 verified above
+    let discriminator: [u8; 8] = data[..8]
+        .try_into()
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
 
     match discriminator {
         LIST_TOOLS => {
@@ -110,7 +113,11 @@ pub fn process_instruction(
             if data.len() < 16 {
                 return Err(ProgramError::InvalidInstructionData);
             }
-            let amount = u64::from_le_bytes(data[8..16].try_into().unwrap());
+            // Safe: Length >= 16 verified above
+            let amount_bytes: [u8; 8] = data[8..16]
+                .try_into()
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            let amount = u64::from_le_bytes(amount_bytes);
             process_increment(program_id, accounts, amount)
         }
         DECREMENT => {
@@ -119,7 +126,11 @@ pub fn process_instruction(
             if data.len() < 16 {
                 return Err(ProgramError::InvalidInstructionData);
             }
-            let amount = u64::from_le_bytes(data[8..16].try_into().unwrap());
+            // Safe: Length >= 16 verified above
+            let amount_bytes: [u8; 8] = data[8..16]
+                .try_into()
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            let amount = u64::from_le_bytes(amount_bytes);
             process_decrement(program_id, accounts, amount)
         }
         _ => {
@@ -212,8 +223,11 @@ fn process_increment(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64)
         return Err(ProgramError::InvalidAccountData);
     }
 
-    // Read current count
-    let count = u64::from_le_bytes(data[40..48].try_into().unwrap());
+    // Read current count - safe: data_len >= 48 verified above
+    let count_bytes: [u8; 8] = data[40..48]
+        .try_into()
+        .map_err(|_| ProgramError::InvalidAccountData)?;
+    let count = u64::from_le_bytes(count_bytes);
 
     // Increment
     let new_count = count.checked_add(amount)
@@ -266,8 +280,11 @@ fn process_decrement(program_id: &Pubkey, accounts: &[AccountInfo], amount: u64)
         return Err(ProgramError::InvalidAccountData);
     }
 
-    // Read current count
-    let count = u64::from_le_bytes(data[40..48].try_into().unwrap());
+    // Read current count - safe: data_len >= 48 verified above
+    let count_bytes: [u8; 8] = data[40..48]
+        .try_into()
+        .map_err(|_| ProgramError::InvalidAccountData)?;
+    let count = u64::from_le_bytes(count_bytes);
 
     // Decrement
     let new_count = count.checked_sub(amount)

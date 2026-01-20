@@ -382,14 +382,14 @@ impl CachedSchemaPages {
     ///
     /// This pre-computes and caches the serialized JSON for each pagination page.
     /// The first page (cursor=0) contains the first tool, and so on.
-    pub fn from_schema(schema: McpSchema) -> Self {
+    pub fn from_schema(schema: &McpSchema) -> Self {
         use crate::generate_paginated_schema_bytes;
 
         let num_pages = schema.tools.len().max(1);
         let mut pages = Vec::with_capacity(num_pages);
 
         for cursor in 0..num_pages {
-            let page_bytes = generate_paginated_schema_bytes(&schema, cursor as u8);
+            let page_bytes = generate_paginated_schema_bytes(schema, cursor as u8);
             pages.push(page_bytes);
         }
 
@@ -410,7 +410,7 @@ impl CachedSchemaPages {
 
     /// Get the number of pages (tools) in this cached schema.
     #[inline]
-    pub fn num_pages(&self) -> usize {
+    pub const fn num_pages(&self) -> usize {
         self.pages.len()
     }
 }

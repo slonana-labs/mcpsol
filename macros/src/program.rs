@@ -58,12 +58,7 @@ pub fn extract_instructions(items: &[syn::Item]) -> Vec<InstructionInfo> {
                     // Parse attribute to get name and description
                     // Convert the entire attribute meta to string for parsing
                     let attr_str = match &attr.meta {
-                        syn::Meta::List(list) => {
-                            let s = list.tokens.to_string();
-                            // Debug: uncomment to see what the token string looks like
-                            // panic!("attr_str for {}: {}", fn_name, s);
-                            s
-                        }
+                        syn::Meta::List(list) => list.tokens.to_string(),
                         syn::Meta::NameValue(nv) => quote::quote!(#nv).to_string(),
                         syn::Meta::Path(_) => String::new(),
                     };
@@ -278,7 +273,8 @@ pub fn generate_dispatcher(
     let mut match_arms = Vec::new();
 
     for ix in instructions {
-        let disc = &ix.discriminator;
+        // Convert [u8; 8] discriminator to u64 for faster matching (single instruction comparison)
+        let disc_u64 = u64::from_le_bytes(ix.discriminator);
         let fn_name = &ix.fn_name;
 
         // Generate optimized argument parsing code
@@ -323,7 +319,7 @@ pub fn generate_dispatcher(
         };
 
         let arm = quote! {
-            [#(#disc),*] => {
+            #disc_u64 => {
                 #arg_parsing
                 #ctx_building
                 #fn_call;
@@ -333,8 +329,9 @@ pub fn generate_dispatcher(
         match_arms.push(arm);
     }
 
-    // Add list_tools discriminator
+    // Add list_tools discriminator as u64
     let list_tools_disc = instruction_discriminator("list_tools");
+    let list_tools_u64 = u64::from_le_bytes(list_tools_disc);
 
     quote! {
         /// Process incoming instructions (optimized: ~30 CU framework overhead)
@@ -349,14 +346,14 @@ pub fn generate_dispatcher(
             }
 
             // SAFETY: Length >= 8 verified above
-            // Optimization: Direct pointer read (~5 CU) vs try_into().map_err() (~50 CU)
+            // Optimization: Read as u64 for single-instruction comparison (~5 CU)
             let discriminator = unsafe {
-                *(instruction_data.as_ptr() as *const [u8; 8])
+                core::ptr::read_unaligned(instruction_data.as_ptr() as *const u64)
             };
 
             match discriminator {
                 // Built-in list_tools instruction
-                [#(#list_tools_disc),*] => {
+                #list_tools_u64 => {
                     pinocchio::program::set_return_data(#mod_name::MCP_SCHEMA_BYTES);
                     Ok(())
                 }

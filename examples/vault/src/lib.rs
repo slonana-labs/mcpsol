@@ -101,7 +101,7 @@ fn build_schema() -> McpSchema {
 static CACHED_PAGES: std::sync::OnceLock<CachedSchemaPages> = std::sync::OnceLock::new();
 
 fn get_cached_pages() -> &'static CachedSchemaPages {
-    CACHED_PAGES.get_or_init(|| CachedSchemaPages::from_schema(build_schema()))
+    CACHED_PAGES.get_or_init(|| CachedSchemaPages::from_schema(&build_schema()))
 }
 
 #[cfg(not(feature = "no-entrypoint"))]
@@ -116,7 +116,10 @@ pub fn process_instruction(
         return Err(ProgramError::InvalidInstructionData);
     }
 
-    let discriminator: [u8; 8] = data[..8].try_into().unwrap();
+    // Safe: Length >= 8 verified above
+    let discriminator: [u8; 8] = data[..8]
+        .try_into()
+        .map_err(|_| ProgramError::InvalidInstructionData)?;
 
     match discriminator {
         LIST_TOOLS_DISCRIMINATOR => {
@@ -132,12 +135,26 @@ pub fn process_instruction(
         }
         DEPOSIT => {
             log!("deposit");
-            let amount = u64::from_le_bytes(data[8..16].try_into().unwrap());
+            if data.len() < 16 {
+                return Err(ProgramError::InvalidInstructionData);
+            }
+            // Safe: Length >= 16 verified above
+            let amount_bytes: [u8; 8] = data[8..16]
+                .try_into()
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            let amount = u64::from_le_bytes(amount_bytes);
             process_deposit(program_id, accounts, amount)
         }
         WITHDRAW => {
             log!("withdraw");
-            let amount = u64::from_le_bytes(data[8..16].try_into().unwrap());
+            if data.len() < 16 {
+                return Err(ProgramError::InvalidInstructionData);
+            }
+            // Safe: Length >= 16 verified above
+            let amount_bytes: [u8; 8] = data[8..16]
+                .try_into()
+                .map_err(|_| ProgramError::InvalidInstructionData)?;
+            let amount = u64::from_le_bytes(amount_bytes);
             process_withdraw(program_id, accounts, amount)
         }
         GET_INFO => {
@@ -323,7 +340,7 @@ mod tests {
     #[test]
     fn test_paginated_schema_with_cache() {
         // Demonstrates CU-optimized pagination pattern
-        let cached = CachedSchemaPages::from_schema(build_schema());
+        let cached = CachedSchemaPages::from_schema(&build_schema());
 
         for cursor in 0..cached.num_pages() {
             let page_bytes = cached.get_page(cursor as u8);
@@ -342,7 +359,7 @@ mod tests {
 
     #[test]
     fn test_schema_has_pda_info() {
-        let cached = CachedSchemaPages::from_schema(build_schema());
+        let cached = CachedSchemaPages::from_schema(&build_schema());
         let page_bytes = cached.get_page(1); // initialize
         let json = String::from_utf8(page_bytes.to_vec()).unwrap();
 
@@ -361,7 +378,7 @@ mod tests {
     #[test]
     fn test_cached_pages_zero_alloc_lookup() {
         // Verify that get_page returns references (no allocation)
-        let cached = CachedSchemaPages::from_schema(build_schema());
+        let cached = CachedSchemaPages::from_schema(&build_schema());
 
         // Multiple calls should return identical slices (no regeneration)
         let page0_first = cached.get_page(0);

@@ -59,8 +59,11 @@ pub mod minimal_counter {
             return Err(McpSolError::ConstraintViolation.into());
         }
 
-        // Update count
-        let current = i64::from_le_bytes(data[8..16].try_into().unwrap());
+        // Update count - safe: slice [8..16] is 8 bytes after discriminator check
+        let current_bytes: [u8; 8] = data[8..16]
+            .try_into()
+            .map_err(|_| McpSolError::InvalidAccount)?;
+        let current = i64::from_le_bytes(current_bytes);
         let new_count = current.saturating_add(amount as i64);
         data[8..16].copy_from_slice(&new_count.to_le_bytes());
 
@@ -86,7 +89,11 @@ pub mod minimal_counter {
             return Err(McpSolError::ConstraintViolation.into());
         }
 
-        let current = i64::from_le_bytes(data[8..16].try_into().unwrap());
+        // Update count - safe: slice [8..16] is 8 bytes after discriminator check
+        let current_bytes: [u8; 8] = data[8..16]
+            .try_into()
+            .map_err(|_| McpSolError::InvalidAccount)?;
+        let current = i64::from_le_bytes(current_bytes);
         let new_count = current.saturating_sub(amount as i64);
         data[8..16].copy_from_slice(&new_count.to_le_bytes());
 

@@ -203,7 +203,7 @@ fn bench_paginated_direct_typical() {
 #[test]
 fn bench_paginated_cached_typical() {
     let schema = build_typical_schema();
-    let cached = CachedSchemaPages::from_schema(schema);
+    let cached = CachedSchemaPages::from_schema(&schema);
     let result = benchmark("paginated_cached_typical", 10000, || {
         for cursor in 0..cached.num_pages() {
             let bytes = cached.get_page(cursor as u8);
@@ -228,7 +228,7 @@ fn bench_paginated_direct_complex() {
 #[test]
 fn bench_paginated_cached_complex() {
     let schema = build_complex_schema();
-    let cached = CachedSchemaPages::from_schema(schema);
+    let cached = CachedSchemaPages::from_schema(&schema);
     let result = benchmark("paginated_cached_complex", 10000, || {
         for cursor in 0..cached.num_pages() {
             let bytes = cached.get_page(cursor as u8);
@@ -246,7 +246,7 @@ fn bench_paginated_cached_complex() {
 fn bench_cache_init_typical() {
     let result = benchmark("cache_init_typical", 1000, || {
         let schema = build_typical_schema();
-        let cached = CachedSchemaPages::from_schema(schema);
+        let cached = CachedSchemaPages::from_schema(&schema);
         std::hint::black_box(&cached);
     });
     result.print();
@@ -256,7 +256,7 @@ fn bench_cache_init_typical() {
 fn bench_cache_init_complex() {
     let result = benchmark("cache_init_complex", 1000, || {
         let schema = build_complex_schema();
-        let cached = CachedSchemaPages::from_schema(schema);
+        let cached = CachedSchemaPages::from_schema(&schema);
         std::hint::black_box(&cached);
     });
     result.print();
@@ -313,7 +313,7 @@ fn summary_report() {
 
     // Paginated sizes
     println!("\nPaginated Page Sizes (typical schema):");
-    let cached_typical = CachedSchemaPages::from_schema(typical.clone());
+    let cached_typical = CachedSchemaPages::from_schema(&typical);
     for i in 0..cached_typical.num_pages() {
         println!("  Page {}: {} bytes", i, cached_typical.get_page(i as u8).len());
     }
@@ -332,7 +332,7 @@ fn summary_report() {
     let direct_ns = start.elapsed().as_nanos() / (iterations as u128 * typical.tools.len() as u128);
 
     // Cached
-    let cached = CachedSchemaPages::from_schema(typical);
+    let cached = CachedSchemaPages::from_schema(&typical);
     let start = Instant::now();
     for _ in 0..iterations {
         for cursor in 0..cached.num_pages() {

@@ -76,7 +76,7 @@ impl<'a> SystemAccount<'a> {
         // SECURITY: Verify account is owned by system program
         // Safety: owner() returns a valid pointer to the account's owner pubkey
         let owner = unsafe { info.owner() };
-        if owner.as_ref() != &SYSTEM_PROGRAM_ID {
+        if owner.as_ref() != SYSTEM_PROGRAM_ID {
             return Err(McpSolError::InvalidOwner.into());
         }
         Ok(Self { info })

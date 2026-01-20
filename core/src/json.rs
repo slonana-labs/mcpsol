@@ -607,7 +607,7 @@ mod tests {
         let direct_page_1 = generate_paginated_schema_bytes(&schema, 1);
 
         // Generate pages via CachedSchemaPages
-        let cached = crate::CachedSchemaPages::from_schema(schema);
+        let cached = crate::CachedSchemaPages::from_schema(&schema);
         let cached_page_0 = cached.get_page(0);
         let cached_page_1 = cached.get_page(1);
 

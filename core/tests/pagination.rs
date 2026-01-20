@@ -119,7 +119,7 @@ fn benchmark_direct_vs_cached_pagination() {
     let direct_elapsed = start_direct.elapsed();
 
     // Cached generation: pre-compute once, return references
-    let cached = CachedSchemaPages::from_schema(schema);
+    let cached = CachedSchemaPages::from_schema(&schema);
     let start_cached = Instant::now();
     for _ in 0..ITERATIONS {
         for cursor in 0..num_pages {
@@ -183,7 +183,7 @@ fn benchmark_full_discovery_cycle() {
     let direct_elapsed = start_direct.elapsed();
 
     // Cached: Pre-computed pages
-    let cached = CachedSchemaPages::from_schema(schema);
+    let cached = CachedSchemaPages::from_schema(&schema);
     let start_cached = Instant::now();
     for _ in 0..ITERATIONS {
         let mut cursor: u8 = 0;
@@ -218,7 +218,7 @@ fn benchmark_full_discovery_cycle() {
 #[test]
 fn verify_cached_output_correctness() {
     let schema = build_10_tool_schema();
-    let cached = CachedSchemaPages::from_schema(schema.clone());
+    let cached = CachedSchemaPages::from_schema(&schema);
 
     println!("\n=== Cached Output Verification ===");
 
@@ -250,7 +250,7 @@ fn measure_cache_initialization_overhead() {
     let start = Instant::now();
     for _ in 0..ITERATIONS {
         let schema = build_10_tool_schema();
-        let cached = CachedSchemaPages::from_schema(schema);
+        let cached = CachedSchemaPages::from_schema(&schema);
         std::hint::black_box(&cached);
     }
     let elapsed = start.elapsed();

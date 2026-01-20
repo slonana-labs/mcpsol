@@ -330,9 +330,17 @@ pub fn derive_accounts(input: TokenStream) -> TokenStream {
     let fields = match &input.data {
         Data::Struct(data) => match &data.fields {
             Fields::Named(fields) => &fields.named,
-            _ => panic!("Accounts derive only supports named fields"),
+            _ => {
+                return syn::Error::new_spanned(&input, "Accounts derive only supports named fields")
+                    .to_compile_error()
+                    .into();
+            }
         },
-        _ => panic!("Accounts derive only supports structs"),
+        _ => {
+            return syn::Error::new_spanned(&input, "Accounts derive only supports structs")
+                .to_compile_error()
+                .into();
+        }
     };
 
     // Generate field extraction code
@@ -341,7 +349,10 @@ pub fn derive_accounts(input: TokenStream) -> TokenStream {
     let mut field_names = Vec::new();
 
     for (idx, field) in fields.iter().enumerate() {
-        let field_name = field.ident.as_ref().unwrap();
+        // Safe: We verified above that fields are named, which always have idents
+        let Some(field_name) = field.ident.as_ref() else {
+            continue; // Unreachable for named fields
+        };
         let field_ty = &field.ty;
         field_names.push(field_name);
 
@@ -357,11 +368,11 @@ pub fn derive_accounts(input: TokenStream) -> TokenStream {
 
                 // Use word boundaries to avoid matching "cosigner" or "immutable"
                 // Split on common delimiters and check for exact matches
-                let parts: Vec<&str> = tokens.split(|c| c == ',' || c == ' ')
+                let parts: Vec<&str> = tokens.split([',', ' '])
                     .map(|s| s.trim())
                     .collect();
-                is_signer = parts.iter().any(|&p| p == "signer");
-                is_mut = parts.iter().any(|&p| p == "mut");
+                is_signer = parts.contains(&"signer");
+                is_mut = parts.contains(&"mut");
             }
         }
 
